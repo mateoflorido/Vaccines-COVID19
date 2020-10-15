@@ -1,0 +1,9 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+  - name: update repos
+    apt:
+      update_cache: yes
+  - name: Allow

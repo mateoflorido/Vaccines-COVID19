@@ -1,0 +1,12 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+  - name: update repos
+    apt:
+      update_cache: yes
+  - name: install openjdk package
+    apt:
+      name: default-jre
+

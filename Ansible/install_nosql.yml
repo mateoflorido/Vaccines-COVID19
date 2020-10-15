@@ -1,0 +1,41 @@
+---
+
+- hosts: nosqldb
+  become: true
+  tasks:
+  - name: install gnupg
+    apt:
+      name: gnupg
+  - name: Add mongo key to apt keychain
+    apt_key:
+      url: https://www.mongodb.org/static/pgp/server-4.4.asc
+      state: present
+  - name: Add mongodb repo
+    apt_repository:
+      repo: deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse
+      state: present
+  - name: update cache
+    apt:
+      update_cache: yes
+  - name: install mongodb package
+    apt:
+      name: mongodb-org
+    notify: 
+    - Enable mongodb
+    - Start mongodb
+    - Restart mongodb
+  handlers:
+    - name: Start mongodb
+      service:
+        name: mongod
+        state: started
+    - name: Restart mongodb
+      service:
+        name: mongod
+        state: restarted
+    - name: Enable mongodb
+      service:
+        name: mongodb
+        enabled: yes
+
+
