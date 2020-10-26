@@ -5,11 +5,11 @@ import org.flosan.EPSLoadRMI.security.RSA;
 
 import javax.crypto.SealedObject;
 import javax.crypto.SecretKey;
+import java.awt.desktop.UserSessionEvent;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Scanner;
@@ -24,11 +24,13 @@ public class EPSClient {
 
     public static void main(String[] args) {
         try {
+            String username = "";
             String arg1;
             String arg2;
             Scanner input = new Scanner(System.in);
             AtomicBoolean inUse = new AtomicBoolean(true);
-            String sessionID;
+            String sessionID = null;
+            SealedObject testKey;
 
             SecretKey aesKey = AES.getAESKey();
             String pubKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAg" +
@@ -61,15 +63,26 @@ public class EPSClient {
             while (inUse.get()) {
                 switch (input.nextLine().trim()) {
                     case "0":
-                        inUse.set(false);
+                        if (sessionID != null) {
+                            inUse.set(false);
+                            testKey = RSA.Encrypt(rsaPubKey, aesKey);
+                            arg1 = AES.Encrypt(username, aesKey);
+                            stub.logout(testKey, username);
+                            sessionID = null;
+                        }
+                        else{
+                            System.out.println("Not Logged yet.");
+                        }
                         break;
                     case "1":
                         System.out.println("Username:");
-                        arg1 = AES.Encrypt(input.nextLine(), aesKey);
+                        username = input.nextLine();
+                        arg1 = AES.Encrypt(username, aesKey);
                         System.err.println("DEBUG: AES ENCRYPTED USER: " + arg1);
                         System.out.println("Password:");
                         arg2 = GetSHA512(input.nextLine());
-                        if (stub.register(arg1, arg2)) ;
+                        testKey = RSA.Encrypt(rsaPubKey, aesKey);
+                        if (stub.register(testKey, arg1, arg2)) ;
                         System.err.println(arg1 + " " + arg2);
                         break;
                     case "2":
@@ -80,7 +93,7 @@ public class EPSClient {
                         arg2 = AES.Encrypt(GetSHA512(input.nextLine()), aesKey);
                         System.err.println("DEBUG: AES ENCRYPTED PASS: " + arg2);
 
-                        SealedObject testKey = RSA.Encrypt(rsaPubKey, aesKey);
+                        testKey = RSA.Encrypt(rsaPubKey, aesKey);
                         sessionID = stub.login(testKey, arg1, arg2);
                         if (sessionID != null) {
                             System.out.println("----- Welcome -----");

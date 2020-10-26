@@ -23,16 +23,20 @@ public class MongoUsers implements MongoAccessInterface {
         this.client = MongoClients.create("mongodb://loadBalancer:user123@192.168.1.115/users");
     }
 
-    public void insertNewUser(String username, String password) {
-        MongoDatabase usersDB = this.client.getDatabase("users");
-        MongoCollection<Document> loginTB = usersDB.getCollection("login");
-        Document eps = new Document("_id", new ObjectId());
-        eps.append("cypherkey", "TODO")
-                .append("username", username)
-                .append("password", password);
-        loginTB.insertOne(eps);
-        System.out.println(eps);
-        return;
+    public boolean insertNewUser(String username, String password) {
+        if (GetUser(username) != null) {
+            MongoDatabase usersDB = this.client.getDatabase("users");
+            MongoCollection<Document> loginTB = usersDB.getCollection("login");
+            Document eps = new Document("_id", new ObjectId());
+            eps.append("cypherkey", "TODO")
+                    .append("username", username)
+                    .append("password", password);
+            loginTB.insertOne(eps);
+            System.out.println(eps);
+            return true;
+        }
+        return false;
+
     }
 
     public Document getUserCredentials(String username, String password) {
@@ -44,6 +48,17 @@ public class MongoUsers implements MongoAccessInterface {
                         Filters.eq("password", password)
                 )).first();
         System.out.println("Gathered: \n" + retrieve);
+        return retrieve;
+    }
+
+    public Document GetUser(String username) {
+        MongoDatabase database = client.getDatabase("users");
+        MongoCollection<Document> collection = database.getCollection("login");
+        Document retrieve = collection.find(
+                Filters.and(
+                        Filters.eq("username", username)
+                )).first();
+        System.out.println("Gathered Checking: \n" + retrieve);
         return retrieve;
     }
 

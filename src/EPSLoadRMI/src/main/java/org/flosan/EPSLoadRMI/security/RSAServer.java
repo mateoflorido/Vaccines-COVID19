@@ -66,8 +66,7 @@ public class RSAServer {
         try {
             KeyFactory kf = KeyFactory.getInstance("RSA");
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privKey));
-            PrivateKey pKey = kf.generatePrivate(keySpec);
-            return pKey;
+            return kf.generatePrivate(keySpec);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (InvalidKeySpecException e) {
