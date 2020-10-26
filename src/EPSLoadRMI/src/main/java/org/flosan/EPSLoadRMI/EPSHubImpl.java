@@ -1,37 +1,55 @@
 package org.flosan.EPSLoadRMI;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import org.flosan.EPSLoadRMI.data.MongoUsers;
+import org.flosan.EPSLoadRMI.security.AES;
+import org.flosan.EPSLoadRMI.security.RSA;
+import org.flosan.EPSLoadRMI.security.RSAServer;
 
-
+import javax.crypto.SealedObject;
+import javax.crypto.SecretKey;
 import java.rmi.RemoteException;
+import java.rmi.server.RemoteServer;
+import java.rmi.server.ServerNotActiveException;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.util.Date;
 
-public class EPSHubImpl implements EPSHubInterface{
-    public void heartBeat() throws RemoteException {
-        System.out.println("Working");
+public class EPSHubImpl implements EPSHubInterface {
+    private KeyPair keychain;
+    private MongoUsers dbUsers;
+
+    public String heartBeat() throws RemoteException {
+        return ("-+-+-+ Welcome to COVID19 Vaccine Distribution Center +-+-+-");
 
     }
-    public boolean login(String username, String password) throws RemoteException {
 
-        // MongoCredential credential = MongoCredential.createCredential("loadBalancer", "users", pass);
-        MongoClientURI uri = new MongoClientURI("mongodb://loadBalancer:user123@192.168.1.115/users");
-        // MongoClient client = MongoClients.create("mongodb://loadBalancer:user123@192.168.1.115/users");
-        MongoClient client = new MongoClient(uri);
-        MongoDatabase database = client.getDatabase("users");
-        MongoCollection<Document> collection = database.getCollection("login");
-        Document retrieve = collection.find(Filters.eq("username", "testuser")).first();
-        System.out.println(retrieve);
-
-        return false;
+    public String login(SealedObject so, String username, String password) throws RemoteException, ServerNotActiveException {
+        PrivateKey pk = RSAServer.generateRSAPrivate();
+        SecretKey uk = RSAServer.Decrypt(pk,so);
+        username = AES.Decrypt(username, uk);
+        password = AES.Decrypt(password, uk);
+        System.err.println("DEBUG: User: " + username + " Password: " + password);
+        if (this.dbUsers == null)
+            this.dbUsers = new MongoUsers();
+        Document retrieve = this.dbUsers.getUserCredentials(username, password);
+        if (retrieve.containsKey("username") && retrieve.containsKey("password")) {
+            return (this.dbUsers.insertSession(username, new Date()));
+        }
+        return null;
     }
 
-    public boolean singup(String username, String password) {
-
-        return false;
+    public boolean register(String username, String password) throws RemoteException {
+        if (this.dbUsers == null)
+            this.dbUsers = new MongoUsers();
+        this.dbUsers.insertNewUser(username, password);
+        return true;
     }
 
 }

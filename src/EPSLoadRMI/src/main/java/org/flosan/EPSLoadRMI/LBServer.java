@@ -7,12 +7,12 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 
-public class LBServer extends EPSHubImpl{
-    private MongoUsers usersDB;
+public class LBServer extends EPSHubImpl {
     public LBServer() {
-        this.usersDB = new MongoUsers();
-
     }
 
     public static void main(String[] args) {
