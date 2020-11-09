@@ -9,6 +9,7 @@ import javax.crypto.SealedObject;
 import javax.crypto.SecretKey;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,27 +47,51 @@ public class ClientHandler extends Thread {
 
         while (inUse.get()) {
             try {
-                this.outputStream.writeUTF("DEBUG: HOUSTON CONNECTED TO SERVER!");
-                this.outputStream.writeUTF(PrintMenu());
-                List<SealedObject> args = (List<SealedObject>) objectIn.readObject();
-                SecretKey userKey = RSA.Decrypt(this.privateKey, args.get(0));
-                operation = (String) AES.Decrypt(args.get(1), userKey);
-                switch (Objects.requireNonNull(operation)) {
-                    case "0":
-                        inUse.compareAndSet(true, false);
-                        break;
-                    case "1":
-                        System.err.println("WARNING: Not implemented.");
-                        break;
-                    case "2":
-                        objectOut.writeObject(
-                                login(
-                                        (String) AES.Decrypt(args.get(2), userKey),
-                                        (String) AES.Decrypt(args.get(3), userKey),
-                                        userKey
-                                )
-                        );
-                        break;
+                try {
+                    this.outputStream.writeUTF("DEBUG: HEARTBEAT CONNECTED TO SERVER!");
+                    this.outputStream.writeUTF(PrintMenu());
+
+                    //noinspection unchecked
+                    List<SealedObject> args = (List<SealedObject>) objectIn.readObject();
+                    SecretKey userKey = RSA.Decrypt(this.privateKey, args.get(0));
+                    operation = (String) AES.Decrypt(args.get(1), userKey);
+                    switch (Objects.requireNonNull(operation)) {
+                        case "0":
+                            inUse.compareAndSet(true, false);
+                            break;
+                        case "1":
+                            System.err.println("WARNING: Testing");
+                            if (args.size() == 8) {
+                                List<String> decArgs = new ArrayList<>();
+                                for (int i = 2; i < args.size(); i++) {
+                                    decArgs.add((String) AES.Decrypt(args.get(i), userKey));
+                                }
+                                /*
+                                for( SealedObject arg :args){
+                                    decArgs.add((String) AES.Decrypt(arg,userKey));
+                                }
+                                */
+                                objectOut.writeObject(register(decArgs, userKey));
+
+                            }
+                            break;
+                        case "2":
+                            objectOut.writeObject(
+                                    login(
+                                            (String) AES.Decrypt(args.get(2), userKey),
+                                            (String) AES.Decrypt(args.get(3), userKey),
+                                            userKey
+                                    )
+                            );
+                            break;
+                    }
+                } catch (SocketException | EOFException e) {
+                    System.out.println("Client Disconnected!");
+                    this.objectOut.close();
+                    this.objectIn.close();
+                    this.outputStream.close();
+                    this.inputStream.close();
+                    inUse.compareAndSet(true, false);
                 }
 
             } catch (IOException | ClassNotFoundException e) {
@@ -81,7 +106,7 @@ public class ClientHandler extends Thread {
                 e.printStackTrace();
             }
         }
-        try{
+        try {
             this.objectOut.close();
             this.objectIn.close();
             this.outputStream.close();
@@ -109,5 +134,28 @@ public class ClientHandler extends Thread {
                 response.add(AES.Encrypt(this.mongo.insertSession(username, new Date()), userKey));
             }
         return response;
+    }
+
+    public List<SealedObject> register(List<String> userData, SecretKey userKey) {
+        List<SealedObject> response = new ArrayList<>();
+
+        if (this.mongo.getNIT(userData.get(0)) != null) {
+            response.add(AES.Encrypt("NIT Already registered. Please check or login in", userKey));
+            return response;
+
+        } else if (this.mongo.getUser(userData.get(4)) != null) {
+            response.add(AES.Encrypt("Username Already registered. Please check or login in", userKey));
+            return response;
+        } else {
+            if( !this.mongo.insertNewUser(userData) ){
+                response.add(AES.Encrypt("Error in register process", userKey));
+            }
+            else{
+                response.add(AES.Encrypt("Register successful, please log in", userKey));
+            }
+            return response;
+        }
+
+
     }
 }

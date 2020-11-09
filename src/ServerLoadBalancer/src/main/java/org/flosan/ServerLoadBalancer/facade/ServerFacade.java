@@ -15,6 +15,7 @@ public class ServerFacade {
         ServerSocket gateway = new ServerSocket(6666);
         PrivateKey privateKey = RSA.generateRSAPrivate();
 
+        //noinspection InfiniteLoopStatement
         while (true) {
             Socket socket = null;
             try {
@@ -29,6 +30,7 @@ public class ServerFacade {
                 t.start();
 
             } catch (Exception e) {
+                assert socket != null;
                 socket.close();
                 e.printStackTrace();
             }

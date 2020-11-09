@@ -1,6 +1,7 @@
 package org.flosan.EPSClient.view;
 
 import org.flosan.EPSClient.controller.EPSController;
+import org.flosan.EPSClient.security.AES;
 import org.flosan.EPSClient.security.SHA;
 
 import java.util.ArrayList;
@@ -22,7 +23,24 @@ public class EPSClientExec {
             switch (scanner.nextLine().trim()) {
                 case "0":
                 case "1":
-                    System.out.println("Not Implemented");
+                    System.out.println("\n Welcome to COVID19 Vaccine Distribution:" +
+                            "\n\t Please fill the following information prior to register." +
+                            "\n NIT: ");
+                    opArgs.add(scanner.nextLine());
+                    System.out.println("IPS Name: ");
+                    opArgs.add(scanner.nextLine());
+                    System.out.println("DC (Distribution Center) Address: ");
+                    opArgs.add(scanner.nextLine());
+                    System.out.println("Phone Number: ");
+                    opArgs.add(scanner.nextLine());
+                    System.out.println("Username: ");
+                    opArgs.add(scanner.nextLine());
+                    System.out.println("Password: ");
+                    opArgs.add(SHA.GetSHA512(scanner.nextLine()));
+                    List<String> opResponse = controller.sendOperation("1", opArgs);
+                    if( opResponse != null){
+                        System.out.println(opResponse.get(0));
+                    }
                     break;
                 case "2":
                     System.out.println("Username: ");
@@ -34,8 +52,11 @@ public class EPSClientExec {
                         System.out.println("--- Welcome " + username + " ---");
                     else
                         System.out.println("**** ERROR LOGIN IN, CHECK CREDENTIALS ****");
+                        opArgs.clear();
                     break;
             }
+            System.out.println(controller.getUTF8());
+            opArgs.clear();
 
         }
     }
