@@ -5,8 +5,10 @@ import org.flosan.EPSClient.security.RSA;
 
 import javax.crypto.SealedObject;
 import javax.crypto.SecretKey;
-import java.net.*;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
@@ -65,44 +67,54 @@ public class EPSController {
 
     }
 
-    public List<String> sendOperation(String opID, List<String> args) {
+    public List<String> sendOperation(String opID, List<String> args) throws IOException {
         List<SealedObject> packet = new ArrayList<>();
         packet.add(RSA.Encrypt(this.rsaPubKey, this.aesKey));
         packet.add(AES.Encrypt(opID, this.aesKey));
         for (String arg : args)
             packet.add(AES.Encrypt(arg, this.aesKey));
         System.err.println("DEBUG: " + "OPID: " + opID + " ARGS: " + args.toString());
-        try {
-            objectOut.writeObject(packet);
-            return receiveOperation(opID);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+
+        objectOut.writeObject(packet);
+        return receiveOperation(opID);
+
     }
 
-    private List<String> receiveOperation(String opID) {
+    private List<String> receiveOperation(String opID) throws IOException {
         List<SealedObject> response;
         List<String> unencResponse = new ArrayList<>();
-        switch (opID){
+        switch (opID) {
+            case "1":
+                try {
+                    response = (List<SealedObject>) objectIn.readObject();
+                    unencResponse.add(AES.Decrypt(response.get(0), this.aesKey));
+                    return unencResponse;
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             case "2":
                 try {
                     response = (List<SealedObject>) objectIn.readObject();
-                    if(response.size() == 1){
+                    if (response.size() == 1) {
                         unencResponse.add(AES.Decrypt(response.get(0), aesKey));
                         this.sessionID = unencResponse.get(0);
+                        System.err.println("DEBUG: SUCESS NEW SESSION ID --> " + this.sessionID);
                         return unencResponse;
-                    }
-                    else{
+                    } else {
                         return null;
                     }
-                } catch (IOException | ClassNotFoundException e) {
+                } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
                 break;
         }
 
         return null;
+    }
+
+    public String getUTF8() throws IOException {
+        System.err.println("DEBUG: " + this.inputStream.readUTF());
+        return (this.inputStream.readUTF());
     }
 
 }
