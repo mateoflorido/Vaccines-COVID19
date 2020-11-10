@@ -1,1 +1,9 @@
 /src/EPSLoadRMI/.idea/
+/src/EPSClient/.idea/
+/src/EPSClient/EPSClient.iml
+/src/EPSClient/target/
+/src/ServerLoadBalancer/.idea/
+/src/ServerLoadBalancer/ServerLoadBalancer.iml
+/src/ServerLoadBalancer/target/
+/src/EPSLoadRMI/EPSLoadRMI.iml
+*.iml
