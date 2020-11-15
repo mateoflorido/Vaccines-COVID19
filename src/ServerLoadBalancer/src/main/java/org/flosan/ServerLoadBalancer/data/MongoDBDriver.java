@@ -1,18 +1,12 @@
 package org.flosan.ServerLoadBalancer.data;
 
-import com.mongodb.WriteConcern;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class MongoDBDriver {
     private final MongoClient client;
@@ -81,6 +75,39 @@ public class MongoDBDriver {
             return session.getObjectId("_id").toString();
         } else
             return null;
+    }
+
+    public String getStock() {
+        MongoDatabase labDB = this.client.getDatabase("lab");
+        MongoCollection<Document> vaccines = labDB.getCollection("vaccines");
+        String response = new String();
+        FindIterable<Document> allVaccines = vaccines.find();
+        Iterator it = allVaccines.iterator();
+        List<Integer> stock = new ArrayList<>();
+        while (it.hasNext()) {
+            Document vac = (Document) it.next();
+            response += vac.getString("type") + " : " + vac.getInteger("stock").toString() + "\n";
+            stock.add(vac.getInteger("stock"));
+        }
+        System.err.println("DEBUG: STOCK -> " + stock.toString());
+        return response;
+    }
+
+    public String insertTransaction(String type, int quantity, String sessionID) {
+        MongoDatabase journalsDB = this.client.getDatabase("journals");
+        MongoCollection<Document> queuedTB = journalsDB.getCollection("queued");
+        Document document = new Document("_id", new ObjectId());
+        document.append("sessionid", sessionID)
+                .append("date", new Date())
+                .append("quantity", quantity)
+                .append("type", type);
+        InsertOneResult resp = queuedTB.insertOne(document);
+        if (resp.wasAcknowledged()) {
+            System.err.println("Session from " + sessionID + document + " INSERTED ID: " + document.getObjectId("_id").toString());
+            return document.getObjectId("_id").toString();
+        } else
+            return null;
+
     }
 
 }

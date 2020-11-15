@@ -1,7 +1,6 @@
 package org.flosan.EPSClient.view;
 
 import org.flosan.EPSClient.controller.EPSController;
-import org.flosan.EPSClient.security.AES;
 import org.flosan.EPSClient.security.SHA;
 
 import java.util.ArrayList;
@@ -16,11 +15,12 @@ public class EPSClientExec {
         Scanner scanner = new Scanner(System.in);
         EPSController controller = new EPSController();
         String sessionID = null;
-        String username = "";
+        String username;
         List<String> opArgs = new ArrayList<>();
 
         while (inUse.get()) {
             switch (scanner.nextLine().trim()) {
+                //TODO Implement the menu as an operation to avoid null pointer.
                 case "0":
                 case "1":
                     System.out.println("\n Welcome to COVID19 Vaccine Distribution:" +
@@ -38,7 +38,7 @@ public class EPSClientExec {
                     System.out.println("Password: ");
                     opArgs.add(SHA.GetSHA512(scanner.nextLine()));
                     List<String> opResponse = controller.sendOperation("1", opArgs);
-                    if( opResponse != null){
+                    if (opResponse != null) {
                         System.out.println(opResponse.get(0));
                     }
                     break;
@@ -48,16 +48,59 @@ public class EPSClientExec {
                     opArgs.add(username);
                     System.out.println("Password: ");
                     opArgs.add(SHA.GetSHA512(scanner.nextLine()));
-                    if (controller.sendOperation("2", opArgs) != null)
+                    List<String> session = controller.sendOperation("2", opArgs);
+                    if (session != null) {
+                        sessionID = session.get(0);
                         System.out.println("--- Welcome " + username + " ---");
-                    else
+                    } else
                         System.out.println("**** ERROR LOGIN IN, CHECK CREDENTIALS ****");
-                        opArgs.clear();
+                    opArgs.clear();
+                    break;
+                case "3":
+                    if (sessionID != null) {
+                        System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
+                        List<String> stck = controller.sendOperation("3", opArgs);
+                        System.out.println("Stock Available: \n" + stck.get(0));
+                        System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
+                        boolean exit = false;
+                        List<String> quantities = new ArrayList<>();
+                        quantities.add("0");
+                        quantities.add("0");
+                        quantities.add("0");
+                        String next;
+                        while (!exit) {
+                            System.out.println("Please choose the vaccine: " +
+                                    "\n\t 0. COV19VAC1" +
+                                    "\n\t 1. COV19VAC2" +
+                                    "\n\t 2. COV19VAC3" +
+                                    "\n\t Or write \"exit\" to finish\n");
+
+                            next = scanner.nextLine();
+                            if (next.equalsIgnoreCase("exit")) {
+                                exit = true;
+                            } else {
+                                int index = Integer.parseInt(next);
+                                if (index <= 2 && index >= 0) {
+                                    System.out.println("Write number of doses: ");
+                                    String doses = scanner.nextLine();
+                                    quantities.add(index, doses);
+                                    quantities.remove(index + 1);
+                                }
+                            }
+
+                        }
+                        System.err.println("DEBUG: QUANTITIES -> " + quantities.toString());
+                        int sum = 0;
+                        controller.sendOperation("3.0", quantities);
+                    } else {
+                        System.err.println("Please login.");
+                    }
                     break;
             }
-            System.out.println(controller.getUTF8());
+            if (sessionID != null) {
+                System.out.println(controller.getUTF8());
+            }
             opArgs.clear();
-
         }
     }
 }

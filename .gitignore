@@ -7,3 +7,4 @@
 /src/ServerLoadBalancer/target/
 /src/EPSLoadRMI/EPSLoadRMI.iml
 *.iml
+src/DistributionCenterRMI/.idea/

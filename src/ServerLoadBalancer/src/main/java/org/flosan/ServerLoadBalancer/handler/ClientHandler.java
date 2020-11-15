@@ -1,6 +1,7 @@
 package org.flosan.ServerLoadBalancer.handler;
 
 import org.bson.Document;
+import org.flosan.DistributionCenterRMI.TransactionHandler;
 import org.flosan.ServerLoadBalancer.data.MongoDBDriver;
 import org.flosan.ServerLoadBalancer.security.AES;
 import org.flosan.ServerLoadBalancer.security.RSA;
@@ -66,11 +67,6 @@ public class ClientHandler extends Thread {
                                 for (int i = 2; i < args.size(); i++) {
                                     decArgs.add((String) AES.Decrypt(args.get(i), userKey));
                                 }
-                                /*
-                                for( SealedObject arg :args){
-                                    decArgs.add((String) AES.Decrypt(arg,userKey));
-                                }
-                                */
                                 objectOut.writeObject(register(decArgs, userKey));
 
                             }
@@ -83,6 +79,18 @@ public class ClientHandler extends Thread {
                                             userKey
                                     )
                             );
+                            break;
+                        case "3":
+                            objectOut.writeObject(
+                                    stock(userKey)
+                            );
+                            break;
+                        case "3.0":
+                            List<String> decArgs = new ArrayList<>();
+                            for (int i = 3; i < args.size(); i++) {
+                                decArgs.add((String) AES.Decrypt(args.get(i), userKey));
+                            }
+                            order(decArgs, userKey, (String) AES.Decrypt(args.get(2), userKey));
                             break;
                     }
                 } catch (SocketException | EOFException e) {
@@ -121,7 +129,8 @@ public class ClientHandler extends Thread {
                 "Menu:\n" +
                 "\t0. Exit\n" +
                 "\t1. Register\n" +
-                "\t2. Login\n";
+                "\t2. Login\n" +
+                "\t3. Place Order\n";
 
     }
 
@@ -147,15 +156,40 @@ public class ClientHandler extends Thread {
             response.add(AES.Encrypt("Username Already registered. Please check or login in", userKey));
             return response;
         } else {
-            if( !this.mongo.insertNewUser(userData) ){
+            if (!this.mongo.insertNewUser(userData)) {
                 response.add(AES.Encrypt("Error in register process", userKey));
-            }
-            else{
+            } else {
                 response.add(AES.Encrypt("Register successful, please log in", userKey));
             }
             return response;
         }
 
+
+    }
+
+    public List<SealedObject> stock(SecretKey userKey) {
+        List<SealedObject> response = new ArrayList<>();
+        response.add(AES.Encrypt(this.mongo.getStock(), userKey));
+        return response;
+    }
+
+    public List<SealedObject> order(List<String> decArgs, SecretKey userKey, String sessionID) {
+        List<String> batch = new ArrayList<>();
+        System.err.println("DEBUG: " + sessionID + " ARGS: " + decArgs.toString());
+        int type = 1;
+        for (String arg : decArgs) {
+            if (!arg.equalsIgnoreCase("0")) {
+                batch.add(this.mongo.insertTransaction("COV19VAC" + type, Integer.parseInt(arg), sessionID));
+            }
+            type++;
+        }
+        System.err.println("DEBUG: Batched --> " + batch.toString());
+        for(String tx : batch){
+            Thread t = new TransactionHandler("picasso.localdomain", tx);
+            t.start();
+        }
+
+        return null;
 
     }
 }

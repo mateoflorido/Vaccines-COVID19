@@ -71,6 +71,9 @@ public class EPSController {
         List<SealedObject> packet = new ArrayList<>();
         packet.add(RSA.Encrypt(this.rsaPubKey, this.aesKey));
         packet.add(AES.Encrypt(opID, this.aesKey));
+        if(sessionID != null){
+            packet.add(AES.Encrypt(this.sessionID, this.aesKey));
+        }
         for (String arg : args)
             packet.add(AES.Encrypt(arg, this.aesKey));
         System.err.println("DEBUG: " + "OPID: " + opID + " ARGS: " + args.toString());
@@ -107,6 +110,21 @@ public class EPSController {
                     e.printStackTrace();
                 }
                 break;
+            case "3":
+                try {
+                    response = (List<SealedObject>) objectIn.readObject();
+                    if (response.size() == 1) {
+                        unencResponse.add(AES.Decrypt(response.get(0), aesKey));
+                        System.err.println("DEBUG: Received stock -> Now Printing: " + unencResponse.get(0));
+                        return unencResponse;
+                    } else {
+                        return null;
+                    }
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+                break;
+
         }
 
         return null;
