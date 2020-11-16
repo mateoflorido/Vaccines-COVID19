@@ -169,7 +169,9 @@ public class ClientHandler extends Thread {
 
     public List<SealedObject> stock(SecretKey userKey) {
         List<SealedObject> response = new ArrayList<>();
-        response.add(AES.Encrypt(this.mongo.getStock(), userKey));
+        List<String> stockAvail = this.mongo.getStock();
+        for( String stock : stockAvail)
+            response.add(AES.Encrypt(stock, userKey));
         return response;
     }
 

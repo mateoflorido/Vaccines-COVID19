@@ -77,16 +77,17 @@ public class MongoDBDriver {
             return null;
     }
 
-    public String getStock() {
+    public List<String> getStock() {
         MongoDatabase labDB = this.client.getDatabase("lab");
         MongoCollection<Document> vaccines = labDB.getCollection("vaccines");
-        String response = new String();
+        List<String> response = new ArrayList<>();
         FindIterable<Document> allVaccines = vaccines.find();
         Iterator it = allVaccines.iterator();
         List<Integer> stock = new ArrayList<>();
         while (it.hasNext()) {
             Document vac = (Document) it.next();
-            response += vac.getString("type") + " : " + vac.getInteger("stock").toString() + "\n";
+            // response += vac.getString("type") + " : " + vac.getInteger("stock").toString() + "\n";
+            response.add(String.valueOf(vac.getInteger("stock")));
             stock.add(vac.getInteger("stock"));
         }
         System.err.println("DEBUG: STOCK -> " + stock.toString());

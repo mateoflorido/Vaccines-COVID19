@@ -71,7 +71,7 @@ public class EPSController {
         List<SealedObject> packet = new ArrayList<>();
         packet.add(RSA.Encrypt(this.rsaPubKey, this.aesKey));
         packet.add(AES.Encrypt(opID, this.aesKey));
-        if(sessionID != null){
+        if (sessionID != null) {
             packet.add(AES.Encrypt(this.sessionID, this.aesKey));
         }
         for (String arg : args)
@@ -113,8 +113,10 @@ public class EPSController {
             case "3":
                 try {
                     response = (List<SealedObject>) objectIn.readObject();
-                    if (response.size() == 1) {
-                        unencResponse.add(AES.Decrypt(response.get(0), aesKey));
+                    if (response.size() >= 1) {
+                        for (SealedObject stock : response) {
+                            unencResponse.add(AES.Decrypt(stock, aesKey));
+                        }
                         System.err.println("DEBUG: Received stock -> Now Printing: " + unencResponse.get(0));
                         return unencResponse;
                     } else {

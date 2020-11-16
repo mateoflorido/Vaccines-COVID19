@@ -60,7 +60,12 @@ public class EPSClientExec {
                     if (sessionID != null) {
                         System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
                         List<String> stck = controller.sendOperation("3", opArgs);
-                        System.out.println("Stock Available: \n" + stck.get(0));
+                        System.out.println("Stock Available: \n");
+                        int typeC = 1;
+                        for (String stock : stck) {
+                            System.out.println("COV19VAC" + typeC + " : " + stock);
+                            typeC++;
+                        }
                         System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
                         boolean exit = false;
                         List<String> quantities = new ArrayList<>();
@@ -83,8 +88,21 @@ public class EPSClientExec {
                                 if (index <= 2 && index >= 0) {
                                     System.out.println("Write number of doses: ");
                                     String doses = scanner.nextLine();
-                                    quantities.add(index, doses);
-                                    quantities.remove(index + 1);
+                                    if (Integer.parseInt(stck.get(index)) - Integer.parseInt(doses) >= 0) {
+                                        quantities.add(index, doses);
+                                        quantities.remove(index + 1);
+                                    }
+                                    else{
+                                        System.err.println("Doses exceeds the stock!");
+                                        System.out.println("Stock Available: \n");
+                                        typeC = 1;
+                                        for (String stock : stck) {
+                                            System.out.println("COV19VAC" + typeC + " : " + stock);
+                                        }
+                                        System.out.println("\n");
+
+                                    }
+
                                 }
                             }
 
