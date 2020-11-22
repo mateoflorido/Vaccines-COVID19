@@ -50,15 +50,13 @@ public class EPSController {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubKey));
             this.rsaPubKey = (RSAPublicKey) keyFactory.generatePublic(keySpec);
 
-            InetAddress ip = InetAddress.getByName("localhost");
+            InetAddress ip = InetAddress.getByName("matisse.localdomain");
             this.aesKey = AES.getAESKey();
             this.socket = new Socket(ip, 6666);
             this.inputStream = new DataInputStream(socket.getInputStream());
             this.outputStream = new DataOutputStream(socket.getOutputStream());
             this.objectOut = new ObjectOutputStream(this.outputStream);
             this.objectIn = new ObjectInputStream(this.inputStream);
-            System.err.println("DEBUG: " + inputStream.readUTF());
-            System.out.println(inputStream.readUTF());
         } catch (UnknownHostException e) {
             System.err.println("ERR: Unknown Host!");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
@@ -76,8 +74,6 @@ public class EPSController {
         }
         for (String arg : args)
             packet.add(AES.Encrypt(arg, this.aesKey));
-        System.err.println("DEBUG: " + "OPID: " + opID + " ARGS: " + args.toString());
-
         objectOut.writeObject(packet);
         return receiveOperation(opID);
 
@@ -101,7 +97,6 @@ public class EPSController {
                     if (response.size() == 1) {
                         unencResponse.add(AES.Decrypt(response.get(0), aesKey));
                         this.sessionID = unencResponse.get(0);
-                        System.err.println("DEBUG: SUCESS NEW SESSION ID --> " + this.sessionID);
                         return unencResponse;
                     } else {
                         return null;
@@ -117,7 +112,21 @@ public class EPSController {
                         for (SealedObject stock : response) {
                             unencResponse.add(AES.Decrypt(stock, aesKey));
                         }
-                        System.err.println("DEBUG: Received stock -> Now Printing: " + unencResponse.get(0));
+                        return unencResponse;
+                    } else {
+                        return null;
+                    }
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case "3.0":
+                try {
+                    response = (List<SealedObject>) objectIn.readObject();
+                    if (response.size() >= 1) {
+                        for (SealedObject stock : response) {
+                            unencResponse.add(AES.Decrypt(stock, aesKey));
+                        }
                         return unencResponse;
                     } else {
                         return null;
@@ -133,7 +142,6 @@ public class EPSController {
     }
 
     public String getUTF8() throws IOException {
-        System.err.println("DEBUG: " + this.inputStream.readUTF());
         return (this.inputStream.readUTF());
     }
 

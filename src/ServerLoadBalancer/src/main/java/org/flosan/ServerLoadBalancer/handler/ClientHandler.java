@@ -11,31 +11,44 @@ import javax.crypto.SecretKey;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ClientHandler extends Thread {
     final DataInputStream inputStream;
     final DataOutputStream outputStream;
-    final Socket socket;
+    private Socket socket;
     private final PrivateKey privateKey;
     private final MongoDBDriver mongo;
     private ObjectInputStream objectIn;
     private ObjectOutputStream objectOut;
+    private final AtomicInteger toServe;
+    private final List<String> hosts;
+    private final List<AtomicBoolean> uptime;
+    private SecretKey serverEncKey;
+    private String sessionID;
 
-    public ClientHandler(Socket s, DataInputStream din, DataOutputStream dout, PrivateKey pk) {
+    public ClientHandler(Socket s, DataInputStream din, DataOutputStream dout, PrivateKey pk, AtomicInteger ts, List<String> hosts, List<AtomicBoolean> serverUptime) {
         this.socket = s;
         this.inputStream = din;
         this.outputStream = dout;
         this.privateKey = pk;
+        this.toServe = ts;
+        this.hosts = hosts;
+        this.uptime = serverUptime;
+
         try {
+            this.serverEncKey = AES.getAESKey();
             this.objectIn = new ObjectInputStream(this.inputStream);
             this.objectOut = new ObjectOutputStream(this.outputStream);
-        } catch (IOException e) {
+        } catch (IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
         this.mongo = new MongoDBDriver("mongodb://loadBalancer:user123@matisse.localdomain/users");
@@ -49,7 +62,6 @@ public class ClientHandler extends Thread {
         while (inUse.get()) {
             try {
                 try {
-                    this.outputStream.writeUTF("DEBUG: HEARTBEAT CONNECTED TO SERVER!");
                     this.outputStream.writeUTF(PrintMenu());
 
                     //noinspection unchecked
@@ -61,7 +73,6 @@ public class ClientHandler extends Thread {
                             inUse.compareAndSet(true, false);
                             break;
                         case "1":
-                            System.err.println("WARNING: Testing");
                             if (args.size() == 8) {
                                 List<String> decArgs = new ArrayList<>();
                                 for (int i = 2; i < args.size(); i++) {
@@ -90,11 +101,12 @@ public class ClientHandler extends Thread {
                             for (int i = 3; i < args.size(); i++) {
                                 decArgs.add((String) AES.Decrypt(args.get(i), userKey));
                             }
-                            order(decArgs, userKey, (String) AES.Decrypt(args.get(2), userKey));
+                            objectOut.writeObject(
+                                    order(decArgs, userKey, (String) AES.Decrypt(args.get(2), userKey))
+                            );
                             break;
                     }
                 } catch (SocketException | EOFException e) {
-                    System.out.println("Client Disconnected!");
                     this.objectOut.close();
                     this.objectIn.close();
                     this.outputStream.close();
@@ -136,11 +148,12 @@ public class ClientHandler extends Thread {
 
     public List<SealedObject> login(String username, String password, SecretKey userKey) {
         List<SealedObject> response = new ArrayList<>();
-        System.err.println("DEBUG: User: " + username + " Password: " + password);
+
         Document retrieve = this.mongo.getUserCredentials(username, password);
         if (retrieve != null)
             if (retrieve.containsKey("username") && retrieve.containsKey("password")) {
-                response.add(AES.Encrypt(this.mongo.insertSession(username, new Date()), userKey));
+                this.sessionID = this.mongo.insertSession(username, new Date());
+                response.add(AES.Encrypt(this.sessionID, userKey));
             }
         return response;
     }
@@ -170,14 +183,14 @@ public class ClientHandler extends Thread {
     public List<SealedObject> stock(SecretKey userKey) {
         List<SealedObject> response = new ArrayList<>();
         List<String> stockAvail = this.mongo.getStock();
-        for( String stock : stockAvail)
+        for (String stock : stockAvail)
             response.add(AES.Encrypt(stock, userKey));
         return response;
     }
 
     public List<SealedObject> order(List<String> decArgs, SecretKey userKey, String sessionID) {
+
         List<String> batch = new ArrayList<>();
-        System.err.println("DEBUG: " + sessionID + " ARGS: " + decArgs.toString());
         int type = 1;
         for (String arg : decArgs) {
             if (!arg.equalsIgnoreCase("0")) {
@@ -185,13 +198,48 @@ public class ClientHandler extends Thread {
             }
             type++;
         }
-        System.err.println("DEBUG: Batched --> " + batch.toString());
-        for(String tx : batch){
-            Thread t = new TransactionHandler("picasso.localdomain", tx);
+        List<AtomicReference<String>> responses = new ArrayList<>();
+        List<Thread> threads = new ArrayList<>();
+
+        for (String tx : batch) {
+            AtomicReference<String> response = new AtomicReference<>("");
+            String host = getNewServer();
+            Thread t = new TransactionHandler(host, tx, response, this.serverEncKey);
+            this.mongo.insertNewRouted(host, this.sessionID);
             t.start();
+            threads.add(t);
+            responses.add(response);
+        }
+        for (Thread th : threads) {
+            try {
+                th.join();
+            } catch (InterruptedException e) {
+                System.err.println("ERROR: HANDLING THREAD!");
+            }
+        }
+        List<SealedObject> ackTransactions = new ArrayList<>();
+        for (AtomicReference<String> rsp : responses) {
+            ackTransactions.add(AES.Encrypt(rsp.get(), userKey));
         }
 
-        return null;
+        return ackTransactions;
 
+    }
+
+    public String getNewServer() {
+        int hostGet;
+        do {
+            hostGet = this.toServe.get();
+            if ((hostGet + 1) % (this.hosts.size()) == 0) {
+                this.toServe.set(0);
+            } else {
+                hostGet = this.toServe.getAndAdd(1);
+
+            }
+            if (hostGet >= this.hosts.size()) {
+                hostGet = 0;
+            }
+        } while (!this.uptime.get(hostGet).get());
+        return this.hosts.get(hostGet);
     }
 }

@@ -25,7 +25,6 @@ public class MongoDBDriver {
                 .append("phone", userData.get(3))
                 .append("username", userData.get(4))
                 .append("password", userData.get(5));
-        System.out.println(ips);
         return loginTB.insertOne(ips).wasAcknowledged();
     }
 
@@ -37,7 +36,6 @@ public class MongoDBDriver {
                         Filters.eq("username", username),
                         Filters.eq("password", password)
                 )).first();
-        System.err.println("Gathered: " + retrieve);
         return retrieve;
     }
 
@@ -48,7 +46,6 @@ public class MongoDBDriver {
                 Filters.and(
                         Filters.eq("username", username)
                 )).first();
-        System.out.println("Gathered Checking: \n" + retrieve);
         return retrieve;
     }
 
@@ -59,7 +56,6 @@ public class MongoDBDriver {
                 Filters.and(
                         Filters.eq("nit", nit)
                 )).first();
-        System.out.println("Gathered Checking: \n" + retrieve);
         return retrieve;
     }
 
@@ -71,7 +67,6 @@ public class MongoDBDriver {
                 .append("date_logged", logged);
         InsertOneResult resp = sessionTB.insertOne(session);
         if (resp.wasAcknowledged()) {
-            System.err.println("Session from " + username + session + " ACK ID: " + Objects.requireNonNull(resp.getInsertedId()).toString().replace("BsonObjectId{value=", "") + " INSERTED ID: " + session.getObjectId("_id").toString());
             return session.getObjectId("_id").toString();
         } else
             return null;
@@ -82,16 +77,25 @@ public class MongoDBDriver {
         MongoCollection<Document> vaccines = labDB.getCollection("vaccines");
         List<String> response = new ArrayList<>();
         FindIterable<Document> allVaccines = vaccines.find();
-        Iterator it = allVaccines.iterator();
+        Iterator<Document> it = allVaccines.iterator();
         List<Integer> stock = new ArrayList<>();
         while (it.hasNext()) {
-            Document vac = (Document) it.next();
-            // response += vac.getString("type") + " : " + vac.getInteger("stock").toString() + "\n";
+            Document vac = it.next();
             response.add(String.valueOf(vac.getInteger("stock")));
             stock.add(vac.getInteger("stock"));
         }
-        System.err.println("DEBUG: STOCK -> " + stock.toString());
         return response;
+    }
+
+    public void insertNewRouted(String host, String sessionID) {
+        MongoDatabase journalsDB = this.client.getDatabase("journals");
+        MongoCollection<Document> balanced = journalsDB.getCollection("balancer");
+        Document document = new Document("_id", new ObjectId());
+        document.append("sessionid", sessionID)
+                .append("date", new Date())
+                .append("host", host);
+        balanced.insertOne(document);
+
     }
 
     public String insertTransaction(String type, int quantity, String sessionID) {
@@ -104,7 +108,6 @@ public class MongoDBDriver {
                 .append("type", type);
         InsertOneResult resp = queuedTB.insertOne(document);
         if (resp.wasAcknowledged()) {
-            System.err.println("Session from " + sessionID + document + " INSERTED ID: " + document.getObjectId("_id").toString());
             return document.getObjectId("_id").toString();
         } else
             return null;

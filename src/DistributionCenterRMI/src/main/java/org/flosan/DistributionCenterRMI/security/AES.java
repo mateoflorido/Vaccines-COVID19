@@ -1,4 +1,4 @@
-package org.flosan.ServerLoadBalancer.security;
+package org.flosan.DistributionCenterRMI.security;
 
 import javax.crypto.*;
 import java.io.IOException;
@@ -7,7 +7,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 public class AES {
-
     public static SecretKey getAESKey() throws NoSuchAlgorithmException {
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
         keyGen.init(256, SecureRandom.getInstanceStrong());
@@ -25,7 +24,6 @@ public class AES {
         return null;
 
     }
-
     public static Object Decrypt(SealedObject toDecrypt, SecretKey key) {
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

@@ -18,11 +18,11 @@ public class MongoDBDriver {
         this.client = MongoClients.create(dbURI);
     }
 
-    public boolean commitTransaction(String id) {
+    public String commitTransaction(String id) {
         MongoDatabase journal = this.client.getDatabase("journals");
         MongoCollection<Document> transaction = journal.getCollection("queued");
-        Document t = transaction.find(eq("_id", new ObjectId(id))).first();
-        System.err.println("DEBUG: RMI FOUND --> " + t.toString());
+        Document t = transaction.findOneAndDelete(eq("_id", new ObjectId(id)));
+        String identifier = id + t.getString("type") + " : " + t.getInteger("quantity");
         Date inserted = t.getDate("date");
         MongoCollection<Document> commitedJournal = journal.getCollection("journal");
         FindIterable<Document> txc = commitedJournal.find(and(
@@ -31,35 +31,60 @@ public class MongoDBDriver {
         ));
         Iterator it = txc.iterator();
         if (it.hasNext()) {
-            return false;
+            addToRegistry(t, false,"OCC");
+            return "Transaction: " + identifier + " Cannot be acomplished. Please try again.";
+        }
+        if (changeStock(t.getString("type"), t.getInteger("quantity"))) {
+            if (placeOrder(t)) {
+                addToRegistry(t, true,"OK");
+                return "Success. Order Placed with Reference: " + " " + identifier;
+            }
         } else {
-
+            addToRegistry(t, false,"NotEnoughStock");
+            return "Transaction: " + identifier + "Error changing stock, please check again the current stock.";
         }
-        //DEBUG ZONE
-        if(changeStock(t.getString("type"), t.getInteger("quantity"))){
-            placeOrder(t);
-        }
-
-
-        return true;
-
+        addToRegistry(t, false,"UNKNOWN");
+        return "Unexpected error when parsing transaction. Please try again later.";
     }
 
     public boolean placeOrder(Document tx) {
         MongoDatabase journal = this.client.getDatabase("journals");
         MongoCollection<Document> transaction = journal.getCollection("journal");
         Document commited = new Document("_id", new ObjectId());
-        commited.append("datecommited", tx.getDate("date"))
+        commited.append("datecommited", new Date())
+                .append("dateplaced", tx.getDate("date"))
                 .append("quantity", tx.getInteger("quantity"))
                 .append("type", tx.getString("type"))
                 .append("sessionid", tx.getString("sessionid"));
         return transaction.insertOne(commited).wasAcknowledged();
     }
 
-    public boolean changeStock(String type, int quantity){
+    public boolean changeStock(String type, int quantity) {
         MongoDatabase lab = this.client.getDatabase("lab");
         MongoCollection<Document> transaction = lab.getCollection("vaccines");
         UpdateResult updateResult = transaction.updateOne(eq("type", type), inc("stock", quantity * -1));
+        if (updateResult.wasAcknowledged()) {
+            FindIterable<Document> currentStock = transaction.find(and(eq("type", type), lt("stock", 0)));
+            Iterator it = currentStock.iterator();
+            if (it.hasNext()) {
+                transaction.updateOne(eq("type", type), inc("stock", quantity));
+                return false;
+            }
+        }
         return updateResult.wasAcknowledged();
+    }
+
+    public void addToRegistry(Document t, boolean acknowledge, String reason){
+        MongoDatabase journal = this.client.getDatabase("journals");
+        MongoCollection<Document> registry = journal.getCollection("registry");
+        Document commited = new Document("_id", new ObjectId());
+        commited.append("quantity", t.getInteger("quantity"))
+                .append("type", t.getString("type"))
+                .append("dateplaced", t.getDate("date"))
+                .append("dateserved", new Date())
+                .append("acknowledge", acknowledge)
+                .append("reason", reason)
+                .append("sessionid", t.getString("sessionid"));
+
     }
 }

@@ -19,9 +19,11 @@ public class EPSClientExec {
         List<String> opArgs = new ArrayList<>();
 
         while (inUse.get()) {
+            System.out.println(controller.getUTF8());
             switch (scanner.nextLine().trim()) {
-                //TODO Implement the menu as an operation to avoid null pointer.
                 case "0":
+                    inUse.set(false);
+                    break;
                 case "1":
                     System.out.println("\n Welcome to COVID19 Vaccine Distribution:" +
                             "\n\t Please fill the following information prior to register." +
@@ -61,6 +63,7 @@ public class EPSClientExec {
                         System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
                         List<String> stck = controller.sendOperation("3", opArgs);
                         System.out.println("Stock Available: \n");
+                        controller.getUTF8();
                         int typeC = 1;
                         for (String stock : stck) {
                             System.out.println("COV19VAC" + typeC + " : " + stock);
@@ -91,8 +94,7 @@ public class EPSClientExec {
                                     if (Integer.parseInt(stck.get(index)) - Integer.parseInt(doses) >= 0) {
                                         quantities.add(index, doses);
                                         quantities.remove(index + 1);
-                                    }
-                                    else{
+                                    } else {
                                         System.err.println("Doses exceeds the stock!");
                                         System.out.println("Stock Available: \n");
                                         typeC = 1;
@@ -107,16 +109,16 @@ public class EPSClientExec {
                             }
 
                         }
-                        System.err.println("DEBUG: QUANTITIES -> " + quantities.toString());
-                        int sum = 0;
-                        controller.sendOperation("3.0", quantities);
+                        List<String> retrieve = controller.sendOperation("3.0", quantities);
+                        System.out.println("**-- Transaction Responses --**");
+                        for (String r : retrieve){
+                            System.out.println(r);
+                        }
+
                     } else {
                         System.err.println("Please login.");
                     }
                     break;
-            }
-            if (sessionID != null) {
-                System.out.println(controller.getUTF8());
             }
             opArgs.clear();
         }

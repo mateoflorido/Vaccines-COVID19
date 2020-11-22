@@ -1,4 +1,4 @@
-package org.flosan.ServerLoadBalancer.security;
+package org.flosan.DistributionCenterRMI.security;
 
 import javax.crypto.*;
 import java.io.IOException;
@@ -6,10 +6,8 @@ import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 public class RSA {
@@ -75,35 +73,6 @@ public class RSA {
 
     }
 
-    // Testing
-    public static RSAPublicKey getRMIRSA() {
-        String pubKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAg" +
-                "EAsoZlbpFmxoEN6ft5MaROls2HXEFzZmOMxZbrF7XRKD1cod/4" +
-                "Q7RPGEtnD+3Dc7/2ogB3i9L+eLOxDg6gr0CiMnxF10dTlnw2Iv" +
-                "TZE6gzMz6Ulse1ImCIWsujq5fgDX3KC0XjWQD6oHqz8ZBImbTv" +
-                "57CKKeRiWIL6CCfjYSWSSLix/ck5ZXGBVcJ9NCw58LETASs4MJ" +
-                "EniDfO7UzCMGSgiPmGd51w2meUfvsrlz/cYVigLR87gbw4XHQr" +
-                "O547MSahHZTbCBaaFvfhlPNAzcVqTGcyHjcGX7pR9rVkSr4KbK" +
-                "4gU2WPQk0N2zfOjuLkrWVHHjFtvnl6Y2aIxDjglHfyntzRNQNC" +
-                "l9Ic2TZ6j4hPZHDdGCpVBAOvxgL6tn7quYCP2OoVg3t7ySWLcd" +
-                "Au0nrIhWaqWC8wDi7yznhgIrvEI/geL5pE0AHp2IhK4W3Kxqh5" +
-                "0NyUksXQa51uNz9N7vAQlvfhMyGajLqcjXKFljKGptVT7JmyfZ" +
-                "wIjUsqMA9zjwJzSeC68ihJA2vvMwCkRkZ8XJ0oJ4ojYOpza3EN" +
-                "cUNFCJoTSwV7jfAqyEp0PByb5kfZBKdA2WHBOOq6zmxNht7V6v" +
-                "tvBVbJ80zQcIRWKhtVFdL8wvYzXmAd2Xe315SD+PIos2XIaoSc" +
-                "fVdHiHrFBK8kZhuUWiHPn0K+56AroG+vGOMCAwEAAQ==";
-        try {
-
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubKey));
-            return (RSAPublicKey) keyFactory.generatePublic(keySpec);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            System.err.println("ERROR: Cannot parse RMI RSA Pub Key");
-        }
-
-        return null;
-    }
-
     public static SecretKey Decrypt(PrivateKey pk, SealedObject so) {
         try {
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
@@ -116,17 +85,6 @@ public class RSA {
         } catch (InvalidKeyException e) {
             System.err.println("ERROR: No valid Key!");
         } catch (IOException | ClassNotFoundException | BadPaddingException | IllegalBlockSizeException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static SealedObject Encrypt(RSAPublicKey pubKey, SecretKey key) {
-        try {
-            Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-            return new SealedObject(key, cipher);
-        } catch (NoSuchAlgorithmException | IllegalBlockSizeException | IOException | InvalidKeyException | NoSuchPaddingException e) {
             e.printStackTrace();
         }
         return null;
