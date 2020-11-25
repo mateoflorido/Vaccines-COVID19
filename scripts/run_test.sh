@@ -1,7 +1,7 @@
 #!/bin/bash
 # Our custom function
 cust_func(){
-	cat sample | /usr/lib/jvm/java-11-openjdk/bin/java -javaagent:/home/mateo/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/202.7660.26/lib/idea_rt.jar=42469:/home/mateo/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/mateo/Vaccines-COVID19/src/EPSClient/target/classes org.flosan.EPSClient.view.EPSClientExec
+	cat sample | /usr/lib/jvm/java-1.11.0-openjdk-amd64/bin/java -javaagent:/home/mateo/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/202.7660.26/lib/idea_rt.jar=35725:/home/mateo/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0/202.7660.26/bin -Dfile.encoding=UTF-8 -classpath /home/mateo/Vaccines-COVID19/src/EPSClient/target/classes org.flosan.EPSClient.view.EPSClientExec
 
 }
 # For loop 5 times

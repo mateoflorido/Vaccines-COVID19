@@ -50,17 +50,18 @@ public class EPSController {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pubKey));
             this.rsaPubKey = (RSAPublicKey) keyFactory.generatePublic(keySpec);
 
-            InetAddress ip = InetAddress.getByName("matisse.localdomain");
+            InetAddress ip = InetAddress.getByName("localhost");
+            //InetAddress ip = InetAddress.getByName("duchamp.localdomain");
             this.aesKey = AES.getAESKey();
             this.socket = new Socket(ip, 6666);
-            this.inputStream = new DataInputStream(socket.getInputStream());
             this.outputStream = new DataOutputStream(socket.getOutputStream());
+            this.inputStream = new DataInputStream(socket.getInputStream());
             this.objectOut = new ObjectOutputStream(this.outputStream);
             this.objectIn = new ObjectInputStream(this.inputStream);
         } catch (UnknownHostException e) {
             System.err.println("ERR: Unknown Host!");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-            e.printStackTrace();
+            System.err.println("Server appears to be offline. Please try again");
         }
 
     }
@@ -74,7 +75,11 @@ public class EPSController {
         }
         for (String arg : args)
             packet.add(AES.Encrypt(arg, this.aesKey));
-        objectOut.writeObject(packet);
+        try {
+            objectOut.writeObject(packet);
+        } catch (Exception e) {
+            System.err.println("Server not available. Please try again.");
+        }
         return receiveOperation(opID);
 
     }

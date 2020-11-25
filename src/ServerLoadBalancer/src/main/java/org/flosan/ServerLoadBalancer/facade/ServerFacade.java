@@ -43,8 +43,8 @@ public class ServerFacade {
             try {
                 socket = gateway.accept();
 
-                DataInputStream dataInput = new DataInputStream(socket.getInputStream());
                 DataOutputStream dataOutput = new DataOutputStream(socket.getOutputStream());
+                DataInputStream dataInput = new DataInputStream(socket.getInputStream());
 
                 Thread t = new ClientHandler(socket, dataInput, dataOutput, privateKey, toServe, hosts, serverUptime);
                 t.start();

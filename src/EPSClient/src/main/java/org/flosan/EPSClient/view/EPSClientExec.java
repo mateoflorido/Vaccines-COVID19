@@ -13,114 +13,124 @@ public class EPSClientExec {
     public static void main(String[] args) throws Exception {
         AtomicBoolean inUse = new AtomicBoolean(true);
         Scanner scanner = new Scanner(System.in);
-        EPSController controller = new EPSController();
+        EPSController controller = null;
+        try {
+            controller = new EPSController();
+        } catch (Exception e) {
+            System.err.println("Server offline. Please try again");
+        }
         String sessionID = null;
         String username;
         List<String> opArgs = new ArrayList<>();
 
         while (inUse.get()) {
-            System.out.println(controller.getUTF8());
-            switch (scanner.nextLine().trim()) {
-                case "0":
-                    inUse.set(false);
-                    break;
-                case "1":
-                    System.out.println("\n Welcome to COVID19 Vaccine Distribution:" +
-                            "\n\t Please fill the following information prior to register." +
-                            "\n NIT: ");
-                    opArgs.add(scanner.nextLine());
-                    System.out.println("IPS Name: ");
-                    opArgs.add(scanner.nextLine());
-                    System.out.println("DC (Distribution Center) Address: ");
-                    opArgs.add(scanner.nextLine());
-                    System.out.println("Phone Number: ");
-                    opArgs.add(scanner.nextLine());
-                    System.out.println("Username: ");
-                    opArgs.add(scanner.nextLine());
-                    System.out.println("Password: ");
-                    opArgs.add(SHA.GetSHA512(scanner.nextLine()));
-                    List<String> opResponse = controller.sendOperation("1", opArgs);
-                    if (opResponse != null) {
-                        System.out.println(opResponse.get(0));
-                    }
-                    break;
-                case "2":
-                    System.out.println("Username: ");
-                    username = scanner.nextLine();
-                    opArgs.add(username);
-                    System.out.println("Password: ");
-                    opArgs.add(SHA.GetSHA512(scanner.nextLine()));
-                    List<String> session = controller.sendOperation("2", opArgs);
-                    if (session != null) {
-                        sessionID = session.get(0);
-                        System.out.println("--- Welcome " + username + " ---");
-                    } else
-                        System.out.println("**** ERROR LOGIN IN, CHECK CREDENTIALS ****");
-                    opArgs.clear();
-                    break;
-                case "3":
-                    if (sessionID != null) {
-                        System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
-                        List<String> stck = controller.sendOperation("3", opArgs);
-                        System.out.println("Stock Available: \n");
-                        controller.getUTF8();
-                        int typeC = 1;
-                        for (String stock : stck) {
-                            System.out.println("COV19VAC" + typeC + " : " + stock);
-                            typeC++;
+            try {
+                System.out.println(controller.getUTF8());
+                switch (scanner.nextLine().trim()) {
+                    case "0":
+                        inUse.set(false);
+                        break;
+                    case "1":
+                        System.out.println("\n Welcome to COVID19 Vaccine Distribution:" +
+                                "\n\t Please fill the following information prior to register." +
+                                "\n NIT: ");
+                        opArgs.add(scanner.nextLine());
+                        System.out.println("IPS Name: ");
+                        opArgs.add(scanner.nextLine());
+                        System.out.println("DC (Distribution Center) Address: ");
+                        opArgs.add(scanner.nextLine());
+                        System.out.println("Phone Number: ");
+                        opArgs.add(scanner.nextLine());
+                        System.out.println("Username: ");
+                        opArgs.add(scanner.nextLine());
+                        System.out.println("Password: ");
+                        opArgs.add(SHA.GetSHA512(scanner.nextLine()));
+                        List<String> opResponse = controller.sendOperation("1", opArgs);
+                        if (opResponse != null) {
+                            System.out.println(opResponse.get(0));
                         }
-                        System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
-                        boolean exit = false;
-                        List<String> quantities = new ArrayList<>();
-                        quantities.add("0");
-                        quantities.add("0");
-                        quantities.add("0");
-                        String next;
-                        while (!exit) {
-                            System.out.println("Please choose the vaccine: " +
-                                    "\n\t 0. COV19VAC1" +
-                                    "\n\t 1. COV19VAC2" +
-                                    "\n\t 2. COV19VAC3" +
-                                    "\n\t Or write \"exit\" to finish\n");
+                        break;
+                    case "2":
+                        System.out.println("Username: ");
+                        username = scanner.nextLine();
+                        opArgs.add(username);
+                        System.out.println("Password: ");
+                        opArgs.add(SHA.GetSHA512(scanner.nextLine()));
+                        List<String> session = controller.sendOperation("2", opArgs);
+                        if (session != null) {
+                            sessionID = session.get(0);
+                            System.out.println("--- Welcome " + username + " ---");
+                        } else
+                            System.out.println("**** ERROR LOGIN IN, CHECK CREDENTIALS ****");
+                        opArgs.clear();
+                        break;
+                    case "3":
+                        if (sessionID != null) {
+                            System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
+                            List<String> stck = controller.sendOperation("3", opArgs);
+                            System.out.println("Stock Available: \n");
+                            controller.getUTF8();
+                            int typeC = 1;
+                            for (String stock : stck) {
+                                System.out.println("COV19VAC" + typeC + " : " + stock);
+                                typeC++;
+                            }
+                            System.out.println("\n\n--* Methods Available *--\n\t 0. CLI");
+                            boolean exit = false;
+                            List<String> quantities = new ArrayList<>();
+                            quantities.add("0");
+                            quantities.add("0");
+                            quantities.add("0");
+                            String next;
+                            while (!exit) {
+                                System.out.println("Please choose the vaccine: " +
+                                        "\n\t 0. COV19VAC1" +
+                                        "\n\t 1. COV19VAC2" +
+                                        "\n\t 2. COV19VAC3" +
+                                        "\n\t Or write \"exit\" to finish\n");
 
-                            next = scanner.nextLine();
-                            if (next.equalsIgnoreCase("exit")) {
-                                exit = true;
-                            } else {
-                                int index = Integer.parseInt(next);
-                                if (index <= 2 && index >= 0) {
-                                    System.out.println("Write number of doses: ");
-                                    String doses = scanner.nextLine();
-                                    if (Integer.parseInt(stck.get(index)) - Integer.parseInt(doses) >= 0) {
-                                        quantities.add(index, doses);
-                                        quantities.remove(index + 1);
-                                    } else {
-                                        System.err.println("Doses exceeds the stock!");
-                                        System.out.println("Stock Available: \n");
-                                        typeC = 1;
-                                        for (String stock : stck) {
-                                            System.out.println("COV19VAC" + typeC + " : " + stock);
+                                next = scanner.nextLine();
+                                if (next.equalsIgnoreCase("exit")) {
+                                    exit = true;
+                                } else {
+                                    int index = Integer.parseInt(next);
+                                    if (index <= 2 && index >= 0) {
+                                        System.out.println("Write number of doses: ");
+                                        String doses = scanner.nextLine();
+                                        if (Integer.parseInt(stck.get(index)) - Integer.parseInt(doses) >= 0) {
+                                            quantities.add(index, doses);
+                                            quantities.remove(index + 1);
+                                        } else {
+                                            System.err.println("Doses exceeds the stock!");
+                                            System.out.println("Stock Available: \n");
+                                            typeC = 1;
+                                            for (String stock : stck) {
+                                                System.out.println("COV19VAC" + typeC + " : " + stock);
+                                            }
+                                            System.out.println("\n");
+
                                         }
-                                        System.out.println("\n");
 
                                     }
-
                                 }
+
+                            }
+                            List<String> retrieve = controller.sendOperation("3.0", quantities);
+                            System.out.println("**-- Transaction Responses --**");
+                            for (String r : retrieve) {
+                                System.out.println(r);
                             }
 
+                        } else {
+                            System.err.println("Please login.");
                         }
-                        List<String> retrieve = controller.sendOperation("3.0", quantities);
-                        System.out.println("**-- Transaction Responses --**");
-                        for (String r : retrieve){
-                            System.out.println(r);
-                        }
-
-                    } else {
-                        System.err.println("Please login.");
-                    }
-                    break;
+                        break;
+                }
+                opArgs.clear();
+            } catch (Exception e) {
+                inUse.set(false);
+                System.err.println("System offline now. Please try again");
             }
-            opArgs.clear();
         }
     }
 }

@@ -46,8 +46,8 @@ public class ClientHandler extends Thread {
 
         try {
             this.serverEncKey = AES.getAESKey();
-            this.objectIn = new ObjectInputStream(this.inputStream);
             this.objectOut = new ObjectOutputStream(this.outputStream);
+            this.objectIn = new ObjectInputStream(this.inputStream);
         } catch (IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
@@ -111,6 +111,7 @@ public class ClientHandler extends Thread {
                     this.objectIn.close();
                     this.outputStream.close();
                     this.inputStream.close();
+                    System.err.println("Client Disconnected");
                     inUse.compareAndSet(true, false);
                 }
 
@@ -122,6 +123,7 @@ public class ClientHandler extends Thread {
                     this.inputStream.close();
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
+                    e.printStackTrace();
                 }
                 e.printStackTrace();
             }
